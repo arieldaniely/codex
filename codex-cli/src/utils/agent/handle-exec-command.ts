@@ -313,6 +313,9 @@ async function getSandbox(runInSandbox: boolean): Promise<SandboxType> {
       // using Landlock in a Linux Docker container from a macOS host may not
       // work.
       return SandboxType.LINUX_LANDLOCK;
+    } else if (process.platform === "win32") {
+      console.warn("Skipping sandbox - not implemented on Windows");
+      return SandboxType.NONE;
     } else if (CODEX_UNSAFE_ALLOW_NO_SANDBOX) {
       // Allow running without a sandbox if the user has explicitly marked the
       // environment as already being sufficiently locked-down.

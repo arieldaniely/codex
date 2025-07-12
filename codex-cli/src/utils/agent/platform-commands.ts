@@ -9,7 +9,7 @@ import { log } from "../logger/log.js";
  */
 const COMMAND_MAP: Record<string, string> = {
   ls: "dir",
-  grep: "findstr",
+  grep: "powershell",
   cat: "type",
   rm: "del",
   cp: "copy",
@@ -28,8 +28,8 @@ const OPTION_MAP: Record<string, Record<string, string>> = {
     "-R": "/s",
   },
   grep: {
-    "-i": "/i",
-    "-r": "/s",
+    "-i": "-CaseSensitive:$false",
+    "-r": "-Recurse",
   },
 };
 
@@ -62,8 +62,28 @@ export function adaptCommandForPlatform(command: Array<string>): Array<string> {
   log(`Adapting command '${cmd}' for Windows platform`);
 
   // Create a new command array with the adapted command
-  const adaptedCommand = [...command];
+  let adaptedCommand = [...command];
   adaptedCommand[0] = COMMAND_MAP[cmd];
+
+  if (cmd === "grep") {
+    const grepOptions = OPTION_MAP[cmd];
+    const args: Array<string> = [];
+    let patternInjected = false;
+    for (let i = 1; i < command.length; i++) {
+      const arg = command[i];
+      if (grepOptions[arg]) {
+        args.push(grepOptions[arg]);
+      } else if (!arg.startsWith("-") && !patternInjected) {
+        args.push("-Pattern", arg);
+        patternInjected = true;
+      } else {
+        args.push(arg);
+      }
+    }
+    adaptedCommand = ["powershell", "-Command", "Select-String", ...args];
+    log(`Adapted command: ${adaptedCommand.join(" ")}`);
+    return adaptedCommand;
+  }
 
   // Adapt options if needed
   const optionsForCmd = OPTION_MAP[cmd];
